@@ -78,6 +78,7 @@ RUN \
 # Set work directory
 WORKDIR /app
 
+RUN mkdir /app/images
 # Copy package.json from build-runner
 COPY --from=build-runner /tmp/app/package.json /app/package.json
 

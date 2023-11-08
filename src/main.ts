@@ -4,7 +4,6 @@ import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
 import { GenerationType } from './types/generation-type'
 import { MakesweetGeneration } from './utils/makesweet-generation'
-import { getMessageGenerationType } from './utils/parse-message'
 
 export const bot = new Client({
   // To use only guild command
