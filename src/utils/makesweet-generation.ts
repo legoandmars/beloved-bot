@@ -1,9 +1,8 @@
 import { type Message } from 'discord.js'
 import path from 'path'
-import { off } from 'process'
 import { type Emote } from '../types/emote'
 import { GenerationType } from '../types/generation-type'
-import { IMAGE1_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants'
+import { BEHATED_SUFFIX, BELOVED_SUFFIX, IMAGE1_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants'
 import { downloadImage } from './image-utils'
 
 export class MakesweetGeneration {
@@ -98,10 +97,17 @@ export class MakesweetGeneration {
   getTrimmedCaption (): string | undefined {
     if (this.caption === undefined) return undefined
     // TODO Turn the generationtext-text conversions into a proper method
-    let generationText = 'my beloved'
-    if (this.generationType === GenerationType.Behated) {
-      generationText = 'my behated'
-    }
+    const generationText = this.textFromGenerationType()
     return this.caption.substring(0, this.caption.lastIndexOf(generationText)).trim()
+  }
+
+  textFromGenerationType (): string {
+    if (this.generationType === GenerationType.Beloved) {
+      return BELOVED_SUFFIX
+    } else if (this.generationType === GenerationType.Behated) {
+      return BEHATED_SUFFIX
+    } else {
+      return ''
+    }
   }
 }

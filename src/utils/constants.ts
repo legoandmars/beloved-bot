@@ -5,3 +5,5 @@ export const EXPORT_SUFFIX = '.gif'
 export const DELETE_IMAGES = false
 export const ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT = true
 export const ONLY_USE_EMOTE_IMAGE_WHEN_NO_OTHER_TEXT = true
+export const BELOVED_SUFFIX = 'my beloved'
+export const BEHATED_SUFFIX = 'my behated'
