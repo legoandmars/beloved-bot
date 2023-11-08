@@ -2,6 +2,9 @@ import { dirname, importx } from '@discordx/importer'
 import type { Interaction, Message } from 'discord.js'
 import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
+import { GenerationType } from './types/generation-type'
+import { MakesweetGeneration } from './utils/makesweet-generation'
+import { getMessageGenerationType } from './utils/parse-message'
 
 export const bot = new Client({
   // To use only guild command
@@ -48,8 +51,13 @@ bot.on('interactionCreate', (interaction: Interaction) => {
   bot.executeInteraction(interaction)
 })
 
-bot.on('messageCreate', (message: Message) => {
-  void bot.executeCommand(message)
+bot.on('messageCreate', async (message: Message) => {
+  // void bot.executeCommand(message)
+  const generation = new MakesweetGeneration(message)
+  if (generation.generationType === GenerationType.None) return
+
+  // try do actually parse stuff
+  await generation.parseMessage()
 })
 
 async function run (): Promise<void> {
