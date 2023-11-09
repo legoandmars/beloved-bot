@@ -1,9 +1,10 @@
 import { type Message } from 'discord.js'
 import path from 'path'
-import { type Emote } from '../types/emote'
-import { GenerationType } from '../types/generation-type'
-import { BEHATED_SUFFIX, BELOVED_SUFFIX, IMAGE1_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants'
-import { downloadImage } from './image-utils'
+import { type Emote } from '../types/emote.js'
+import { GenerationType } from '../types/generation-type.js'
+import { BEHATED_SUFFIX, BELOVED_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants.js'
+import { downloadImage, saveImageFromBuffer } from './image-utils.js'
+import { getImageOfText } from './text-utils.js'
 
 export class MakesweetGeneration {
   message: Message
@@ -30,6 +31,12 @@ export class MakesweetGeneration {
     await this.parseEmoteMentions()
   }
 
+  async generateTextImage (): Promise<void> {
+    const textImageBuffer = getImageOfText(this.caption)
+    const textImagePath = this.getImagePathWithSuffix(IMAGE2_SUFFIX)
+    await saveImageFromBuffer(textImageBuffer, textImagePath)
+  }
+
   async parseMessageMentions (): Promise<void> {
     this.message.mentions.members?.each(member => {
       this.caption = this.caption.replace(member.displayName, member.user.username)
@@ -41,7 +48,7 @@ export class MakesweetGeneration {
     // (TODO: ADD more? somehow combine images for many users?)
     if (this.message.mentions.members?.size === 1) {
       const firstMember = this.message.mentions.members.first()
-      if (firstMember !== undefined && (!ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT || this.getTrimmedCaption() === `${firstMember?.user.username}`)) {
+      if (firstMember !== undefined && (!ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT || this.getTrimmedCaption() === `@${firstMember?.user.username}`)) {
         // replace first @ instance. this may break if USE_AVATAR_WHEN_MESSAGE_IS_MORE_THAN_PING is true. this should be fixed
         this.caption = this.caption.replace('@', '')
         this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
@@ -84,8 +91,8 @@ export class MakesweetGeneration {
   }
 
   getMessageGenerationType (): GenerationType {
-    if (this.messageEndsWithSuffix(this.message, 'my beloved')) return GenerationType.Beloved
-    else if (this.messageEndsWithSuffix(this.message, 'my behated')) return GenerationType.Behated
+    if (this.messageEndsWithSuffix(this.message, this.textFromGenerationType(GenerationType.Beloved))) return GenerationType.Beloved
+    else if (this.messageEndsWithSuffix(this.message, this.textFromGenerationType(GenerationType.Behated))) return GenerationType.Behated
     else return GenerationType.None
   }
 
@@ -101,10 +108,10 @@ export class MakesweetGeneration {
     return this.caption.substring(0, this.caption.lastIndexOf(generationText)).trim()
   }
 
-  textFromGenerationType (): string {
-    if (this.generationType === GenerationType.Beloved) {
+  textFromGenerationType (generationType: GenerationType = this.generationType): string {
+    if (generationType === GenerationType.Beloved) {
       return BELOVED_SUFFIX
-    } else if (this.generationType === GenerationType.Behated) {
+    } else if (generationType === GenerationType.Behated) {
       return BEHATED_SUFFIX
     } else {
       return ''

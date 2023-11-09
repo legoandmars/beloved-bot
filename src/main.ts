@@ -2,8 +2,8 @@ import { dirname, importx } from '@discordx/importer'
 import type { Interaction, Message } from 'discord.js'
 import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
-import { GenerationType } from './types/generation-type'
-import { MakesweetGeneration } from './utils/makesweet-generation'
+import { GenerationType } from './types/generation-type.js'
+import { MakesweetGeneration } from './utils/makesweet-generation.js'
 
 export const bot = new Client({
   // To use only guild command
@@ -57,6 +57,7 @@ bot.on('messageCreate', async (message: Message) => {
 
   // try do actually parse stuff
   await generation.parseMessage()
+  await generation.generateTextImage()
 })
 
 async function run (): Promise<void> {
