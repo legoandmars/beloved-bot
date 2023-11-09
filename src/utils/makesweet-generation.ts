@@ -3,7 +3,7 @@ import path from 'path'
 import { type Emote } from '../types/emote.js'
 import { GenerationType } from '../types/generation-type.js'
 import { type ImageService } from '../types/image-service.js'
-import { BEHATED_SUFFIX, BELOVED_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants.js'
+import { BEHATED_SUFFIX, BELOVED_SUFFIX, EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants.js'
 import { downloadImage, saveImageFromBuffer, tryDownloadImageFromArray } from './image-utils.js'
 import { getImageOfText } from './text-utils.js'
 
@@ -14,6 +14,8 @@ export class MakesweetGeneration {
   caption: string
 
   imagePath: string | undefined
+  textImagePath: string | undefined
+  exportPath: string | undefined
 
   constructor (message: Message) {
     this.message = message
@@ -26,7 +28,7 @@ export class MakesweetGeneration {
     }
   }
 
-  async generate (imageService: ImageService): Promise<string | undefined> {
+  async generateImages (imageService: ImageService): Promise<boolean> {
     // try do actually parse stuff
     await this.parseMessage()
     await this.generateTextImage()
@@ -35,16 +37,17 @@ export class MakesweetGeneration {
       // image has not been set by message parse, so we'll need to get one from the image service
       const images = await imageService.getImagesPathsFromTextPrompt(this.getTrimmedCaption())
       console.log(images)
-      if (images === undefined || images?.length === 0) return undefined
+      if (images === undefined || images?.length === 0) return false
 
       this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
 
       const success = await tryDownloadImageFromArray(images, this.imagePath)
-      if (!success) return undefined
+      if (!success) return false
     }
 
+    this.exportPath = this.getImagePathWithSuffix(EXPORT_SUFFIX)
     // if we've made it to this point, both images exist 100%
-    // so we can go ahead and do the makesweet generation
+    return true
   }
 
   async parseMessage (): Promise<void> {
@@ -55,8 +58,8 @@ export class MakesweetGeneration {
 
   async generateTextImage (): Promise<void> {
     const textImageBuffer = getImageOfText(this.caption)
-    const textImagePath = this.getImagePathWithSuffix(IMAGE2_SUFFIX)
-    await saveImageFromBuffer(textImageBuffer, textImagePath)
+    this.textImagePath = this.getImagePathWithSuffix(IMAGE2_SUFFIX)
+    await saveImageFromBuffer(textImageBuffer, this.textImagePath)
   }
 
   async parseMessageMentions (): Promise<void> {

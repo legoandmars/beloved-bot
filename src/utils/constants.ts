@@ -1,3 +1,7 @@
+export const HEART_TEMPLATE_PATH = '/app/templates/heart-locket.zip'
+export const BELOVED_ERROR_GIF_PATH = '/app/resources/error.gif'
+export const BEHATED_ERROR_GIF_PATH = '/app/resources/error_reversed.gif'
+export const MAKESWEET_PATH = '/app/makesweet/reanimator'
 export const IMAGE_DIRECTORY = './images'
 export const IMAGE1_SUFFIX = '-image1.png'
 export const IMAGE2_SUFFIX = '-image2.png'

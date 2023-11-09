@@ -42,12 +42,6 @@ RUN \
   cmake -DUSE_OPENCV=ON -DUSE_DETAIL=ON -DYARP_DIR=/tmp/yarp ..; \
   make VERBOSE=1
 
-#RUN \
-#  echo "#!/bin/bash" > /reanimator; \
-#  echo "cd /share" >> /reanimator; \
-#  echo "/makesweet/build/bin/reanimator \"\$@\"" >> /reanimator; \
-#  chmod u+x /reanimator
-
 ## build runner
 FROM node:lts-buster as build-runner
 
@@ -62,7 +56,7 @@ RUN npm install
 
 # Move source files
 COPY src ./src
-COPY tsconfig.json   .
+COPY tsconfig.json .
 
 # Build project
 RUN npm run build
@@ -74,6 +68,16 @@ FROM node:lts-buster as prod-runner
 RUN \
   apt-get update; \
   apt-get install -y libgd-dev libzzip-dev libopencv-highgui-dev libopencv-videoio-dev protobuf-compiler libjsoncpp-dev
+
+# install ffmpeg for mp4 -> gif conversion
+RUN \
+  apt-get install -y ffmpeg
+
+# install necessary fonts
+RUN \
+  sed -i'.bak' 's/$/ contrib/' /etc/apt/sources.list; \
+  apt-get update; \
+  apt-get install -y ttf-mscorefonts-installer fontconfig
 
 # Set work directory
 WORKDIR /app
@@ -90,7 +94,10 @@ RUN ldconfig
 COPY --from=makesweet-build-runner /makesweet/build/bin /app/makesweet
 
 # Copy makesweet templates
-COPY ./makesweet/templates /app/makesweet/templates
+COPY ./makesweet/templates /app/templates
+
+# Copy resources
+COPY ./resources /app/resources
 
 # Install dependencies
 RUN npm install --omit=dev
