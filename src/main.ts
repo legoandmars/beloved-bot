@@ -3,6 +3,7 @@ import type { Interaction, Message } from 'discord.js'
 import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
 import { BingImages } from './external/bing-images.js'
+import { FFmpeg } from './external/ffmpeg.js'
 import { Makesweet } from './external/makesweet.js'
 import { GenerationType } from './types/generation-type.js'
 import { type ImageService } from './types/image-service.js'
@@ -34,6 +35,7 @@ export const bot = new Client({
 // TODO make this actually gracefully handle the api key failing & add warnings when certain env variables missing
 let imageService: ImageService
 const makesweet: Makesweet = new Makesweet()
+const ffmpeg: FFmpeg = new FFmpeg()
 
 bot.once('ready', async () => {
   // Make sure all guilds are cached
@@ -69,7 +71,17 @@ bot.on('messageCreate', async (message: Message) => {
     return
   }
 
-  makesweet.generate(generation)
+  // technically could also be mp4
+  const belovedGif = await makesweet.generateWithErrorGif(generation)
+  let finalPath: string
+  // transcode if necessary
+  if (!generation.failed && generation.needsTranscode() && generation.ffmpegExportPath !== undefined) {
+    finalPath = await ffmpeg.transcodeToGif(belovedGif, generation.ffmpegExportPath, generation.generationType)
+  } else {
+    finalPath = belovedGif
+  }
+
+  await message.reply({ files: [finalPath] })
 })
 
 async function run (): Promise<void> {

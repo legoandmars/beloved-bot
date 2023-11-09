@@ -3,7 +3,7 @@ import path from 'path'
 import { type Emote } from '../types/emote.js'
 import { GenerationType } from '../types/generation-type.js'
 import { type ImageService } from '../types/image-service.js'
-import { BEHATED_SUFFIX, BELOVED_SUFFIX, EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants.js'
+import { BEHATED_SUFFIX, BELOVED_SUFFIX, FFMPEG_EXPORT_SUFFIX, GIF_EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT, TRANSCODE_FROM_MP4, VIDEO_EXPORT_SUFFIX } from './constants.js'
 import { downloadImage, saveImageFromBuffer, tryDownloadImageFromArray } from './image-utils.js'
 import { getImageOfText } from './text-utils.js'
 
@@ -16,6 +16,9 @@ export class MakesweetGeneration {
   imagePath: string | undefined
   textImagePath: string | undefined
   exportPath: string | undefined
+  ffmpegExportPath: string | undefined
+
+  failed: boolean = false
 
   constructor (message: Message) {
     this.message = message
@@ -44,8 +47,8 @@ export class MakesweetGeneration {
       const success = await tryDownloadImageFromArray(images, this.imagePath)
       if (!success) return false
     }
-
-    this.exportPath = this.getImagePathWithSuffix(EXPORT_SUFFIX)
+    this.exportPath = this.getImagePathWithSuffix(TRANSCODE_FROM_MP4 ? VIDEO_EXPORT_SUFFIX : GIF_EXPORT_SUFFIX)
+    this.ffmpegExportPath = this.getImagePathWithSuffix(FFMPEG_EXPORT_SUFFIX)
     // if we've made it to this point, both images exist 100%
     return true
   }
@@ -109,6 +112,20 @@ export class MakesweetGeneration {
       this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
       await downloadImage(`https://cdn.discordapp.com/emojis/${validEmotes[0].id}.png`, this.imagePath)
     }
+  }
+
+  needsTranscode (): boolean {
+    // if TRANSCODE_FROM_MP4 OFF:
+    // beloved exportPath
+    // behated ffmpegExportPath
+    // if TRANSCODE_FROM_MP4 ON:
+    // beloved ffmpegExportPath
+    // behated ffmpegExportPath
+    if (!TRANSCODE_FROM_MP4) {
+      return this.generationType === GenerationType.Behated
+    }
+
+    return true
   }
 
   getImagePathWithSuffix (suffix: string): string {

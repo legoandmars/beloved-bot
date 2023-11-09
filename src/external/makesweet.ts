@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { BEHATED_ERROR_GIF_PATH, BELOVED_ERROR_GIF_PATH, HEART_TEMPLATE_PATH, MAKESWEET_PATH } from '../utils/constants.js'
+import { BEHATED_ERROR_GIF_PATH, BELOVED_ERROR_GIF_PATH, HEART_TEMPLATE_PATH, MAKESWEET_PATH, TRANSCODE_FROM_MP4 } from '../utils/constants.js'
 import { type MakesweetGeneration } from '../utils/makesweet-generation.js'
 import { GenerationType } from '../types/generation-type.js'
 
@@ -13,7 +13,10 @@ export class Makesweet {
   async generateWithErrorGif (generation: MakesweetGeneration): Promise<string> {
     const generated = await this.generate(generation)
 
-    if (generated === undefined) return this.errorGifPathFromGenerationType(generation.generationType)
+    if (generated === undefined) {
+      generation.failed = true
+      return this.errorGifPathFromGenerationType(generation.generationType)
+    }
     return generated
   }
 
@@ -44,7 +47,7 @@ export class Makesweet {
   execStringFromGeneration (generation: MakesweetGeneration): string | undefined {
     if (generation.imagePath === undefined || generation.textImagePath === undefined || generation.exportPath === undefined) return undefined
 
-    return `${MAKESWEET_PATH} --zip ${HEART_TEMPLATE_PATH} --in ${generation.imagePath} ${generation.textImagePath} --gif ${generation.exportPath}`
+    return `${MAKESWEET_PATH} --zip ${HEART_TEMPLATE_PATH} --in ${generation.imagePath} ${generation.textImagePath} ${TRANSCODE_FROM_MP4 ? '--vid' : '--gif'} ${generation.exportPath}`
   }
 
   errorGifPathFromGenerationType (generationType: GenerationType): string {
