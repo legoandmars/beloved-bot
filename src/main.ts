@@ -2,7 +2,9 @@ import { dirname, importx } from '@discordx/importer'
 import type { Interaction, Message } from 'discord.js'
 import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
+import { BingImages } from './external/bing-images.js'
 import { GenerationType } from './types/generation-type.js'
+import { type ImageService } from './types/image-service.js'
 import { MakesweetGeneration } from './utils/makesweet-generation.js'
 
 export const bot = new Client({
@@ -27,6 +29,9 @@ export const bot = new Client({
     prefix: '!'
   }
 })
+
+// TODO make this actually gracefully handle the api key failing & add warnings when certain env variables missing
+let imageService: ImageService
 
 bot.once('ready', async () => {
   // Make sure all guilds are cached
@@ -56,8 +61,7 @@ bot.on('messageCreate', async (message: Message) => {
   if (generation.generationType === GenerationType.None) return
 
   // try do actually parse stuff
-  await generation.parseMessage()
-  await generation.generateTextImage()
+  await generation.generate(imageService)
 })
 
 async function run (): Promise<void> {
@@ -73,8 +77,19 @@ async function run (): Promise<void> {
     throw Error('Could not find BOT_TOKEN in your environment')
   }
 
+  if (process.env.BING_IMAGES_API_KEY === undefined) {
+    throw Error('Could not find BING_IMAGES_API_KEY in your environment')
+  }
+
   // Log in with your bot token
   await bot.login(process.env.BOT_TOKEN)
+
+  // Pass token to ImageService
+  imageService = new BingImages(process.env.BING_IMAGES_API_KEY)
 }
 
 void run()
+
+// applicable env variables:
+// BING_IMAGES_API_KEY
+// BOT_TOKEN

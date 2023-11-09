@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { promises as fs } from 'fs'
 import sharp from 'sharp'
+import { MAX_IMAGE_RETRY_BEFORE_CANCELLING, STRETCH_IMAGES } from './constants.js'
 
 export async function downloadImage (imageUrl: string, exportPath: string): Promise<void> {
   const imageResponse = await axios({ url: imageUrl, responseType: 'arraybuffer' })
@@ -11,11 +12,28 @@ export async function downloadImage (imageUrl: string, exportPath: string): Prom
 
 export async function saveResizedImageFromBuffer (buffer: Buffer, exportPath: string, width: number, height: number): Promise<void> {
   await sharp(buffer, {})
-    .resize(width, height)
+    .resize(width, height, { fit: STRETCH_IMAGES ? 'fill' : 'cover' })
     .png()
     .toFile(exportPath)
 }
 
 export async function saveImageFromBuffer (buffer: Buffer, exportPath: string): Promise<void> {
   await fs.writeFile(exportPath, buffer)
+}
+
+// TODO: Add some sort of delay here just in case it starts spamming requests
+export async function tryDownloadImageFromArray (images: string[], exportPath: string, attempt: number = 0, maxTries: number = MAX_IMAGE_RETRY_BEFORE_CANCELLING): Promise<boolean> {
+  if (attempt > maxTries || attempt === images.length) return false
+  const image = images[attempt]
+
+  if (image === undefined) return false
+  // now actually attempt to download image
+  try {
+    await downloadImage(image, exportPath)
+    return true
+  } catch (ex) {
+    console.log(`Error while trying to download image ${image}`)
+    console.log(ex)
+    return await tryDownloadImageFromArray(images, exportPath, attempt + 1, maxTries)
+  }
 }

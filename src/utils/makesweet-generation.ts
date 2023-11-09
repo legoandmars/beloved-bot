@@ -2,8 +2,9 @@ import { type Message } from 'discord.js'
 import path from 'path'
 import { type Emote } from '../types/emote.js'
 import { GenerationType } from '../types/generation-type.js'
+import { type ImageService } from '../types/image-service.js'
 import { BEHATED_SUFFIX, BELOVED_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT } from './constants.js'
-import { downloadImage, saveImageFromBuffer } from './image-utils.js'
+import { downloadImage, saveImageFromBuffer, tryDownloadImageFromArray } from './image-utils.js'
 import { getImageOfText } from './text-utils.js'
 
 export class MakesweetGeneration {
@@ -23,6 +24,27 @@ export class MakesweetGeneration {
       // blank string used instead of null to make writing methods less painful
       this.caption = ''
     }
+  }
+
+  async generate (imageService: ImageService): Promise<string | undefined> {
+    // try do actually parse stuff
+    await this.parseMessage()
+    await this.generateTextImage()
+
+    if (this.imagePath == null) {
+      // image has not been set by message parse, so we'll need to get one from the image service
+      const images = await imageService.getImagesPathsFromTextPrompt(this.getTrimmedCaption())
+      console.log(images)
+      if (images === undefined || images?.length === 0) return undefined
+
+      this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
+
+      const success = await tryDownloadImageFromArray(images, this.imagePath)
+      if (!success) return undefined
+    }
+
+    // if we've made it to this point, both images exist 100%
+    // so we can go ahead and do the makesweet generation
   }
 
   async parseMessage (): Promise<void> {
@@ -101,8 +123,7 @@ export class MakesweetGeneration {
   }
 
   // low tech method used when checking for ONLY a certain type of text present (eg, only pinging a user)
-  getTrimmedCaption (): string | undefined {
-    if (this.caption === undefined) return undefined
+  getTrimmedCaption (): string {
     // TODO Turn the generationtext-text conversions into a proper method
     const generationText = this.textFromGenerationType()
     return this.caption.substring(0, this.caption.lastIndexOf(generationText)).trim()

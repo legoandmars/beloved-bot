@@ -19,7 +19,6 @@
     "axios": "^1.6.1",
     "discord.js": "^14.13.0",
     "discordx": "^11.8.0",
-    "node-fetch": "^3.3.2",
     "sharp": "^0.32.6"
   },
   "devDependencies": {
