@@ -82,7 +82,11 @@ RUN \
 # install emoji font 
 RUN \
   wget -P /app/resources/ https://github.com/PoomSmart/EmojiLibrary/releases/download/0.16.4/AppleColorEmoji@2x.ttf
-  
+
+# install noto for a lot of unicode coverage. this adds about 700mb to the image and might be overkill
+RUN \ 
+  apt-get install -y fonts-noto
+
 # Set work directory
 WORKDIR /app
 

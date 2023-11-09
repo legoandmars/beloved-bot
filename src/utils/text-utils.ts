@@ -60,7 +60,8 @@ export function getImageOfText (inputText: string): Buffer {
   const canvas = createCanvas(512, 512)
   const ctx = canvas.getContext('2d')
   const fontSize = resizeFontSizeToFit(inputText, ctx, 65.5, idealWidth)
-  ctx.font = fontSize + 'px Arial, Apple Emoji'
+  // this does not feel like how you are supposed to do this
+  ctx.font = fontSize + 'px Arial, Apple Emoji, Noto Sans, Noto Sans CJK JP, Noto Sans SC, Noto Sans TC, Noto Sans HK, Noto Sans KR, Noto Sans Hebrew, Noto Sans Lao, Noto Sans Thai, Noto Sans Arabic, Noto Sans Bengali, Noto Sans Devanagari, Noto Sans Gurmukhi, Noto Sans Gujarati, Noto Sans Tibetan, Noto Sans Georgian, Noto Sans Armenian, Noto Sans Khmer'
   ctx.textAlign = 'center'
 
   const lines = getLines(ctx, inputText, idealWidth)
@@ -79,5 +80,8 @@ export function loadGlobalFonts (): void {
     GlobalFonts.registerFromPath('/app/resources/AppleColorEmoji@2x.ttf', 'Apple Emoji')
   } catch {
     console.log('Loading emoji font failed.')
+  }
+  for (const family of GlobalFonts.families) {
+    console.log(family.family)
   }
 }

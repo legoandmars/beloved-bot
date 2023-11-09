@@ -65,6 +65,7 @@ bot.on('messageCreate', async (message: Message) => {
   const generation = new MakesweetGeneration(message)
   if (generation.generationType === GenerationType.None) return
 
+  void message.channel.sendTyping()
   // try do actually parse stuff
   const generationSuccess = await generation.generateImages(imageService)
   if (!generationSuccess) {
