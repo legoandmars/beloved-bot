@@ -4,7 +4,7 @@ import { type Emote } from '../types/emote.js'
 import { GenerationType } from '../types/generation-type.js'
 import { type ImageService } from '../types/image-service.js'
 import { BEHATED_SUFFIX, BELOVED_SUFFIX, FFMPEG_EXPORT_SUFFIX, GIF_EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT, TRANSCODE_FROM_MP4, VIDEO_EXPORT_SUFFIX } from './constants.js'
-import { downloadImage, saveImageFromBuffer, tryDownloadImageFromArray } from './image-utils.js'
+import { deleteImage, downloadImage, saveImageFromBuffer, tryDownloadImageFromArray } from './image-utils.js'
 import { getImageOfText } from './text-utils.js'
 
 export class MakesweetGeneration {
@@ -39,7 +39,7 @@ export class MakesweetGeneration {
     if (this.imagePath == null) {
       // image has not been set by message parse, so we'll need to get one from the image service
       const images = await imageService.getImagesPathsFromTextPrompt(this.getTrimmedCaption())
-      console.log(images)
+      // console.log(images)
       if (images === undefined || images?.length === 0) return false
 
       this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
@@ -112,6 +112,13 @@ export class MakesweetGeneration {
       this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
       await downloadImage(`https://cdn.discordapp.com/emojis/${validEmotes[0].id}.png`, this.imagePath)
     }
+  }
+
+  async cleanup (): Promise<void> {
+    if (this.imagePath !== undefined) await deleteImage(this.imagePath)
+    if (this.textImagePath !== undefined) await deleteImage(this.textImagePath)
+    if (this.exportPath !== undefined) await deleteImage(this.exportPath)
+    if (this.ffmpegExportPath !== undefined) await deleteImage(this.ffmpegExportPath)
   }
 
   needsTranscode (): boolean {

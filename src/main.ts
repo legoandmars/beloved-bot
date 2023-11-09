@@ -7,6 +7,7 @@ import { FFmpeg } from './external/ffmpeg.js'
 import { Makesweet } from './external/makesweet.js'
 import { GenerationType } from './types/generation-type.js'
 import { type ImageService } from './types/image-service.js'
+import { DELETE_IMAGES } from './utils/constants.js'
 import { MakesweetGeneration } from './utils/makesweet-generation.js'
 import { loadGlobalFonts } from './utils/text-utils.js'
 
@@ -43,7 +44,7 @@ bot.once('ready', async () => {
   // await bot.guilds.fetch();
 
   // Synchronize applications commands with Discord
-  await bot.initApplicationCommands()
+  // await bot.initApplicationCommands()
 
   // To clear all guild commands, uncomment this line,
   // This is useful when moving from guild commands to global commands
@@ -83,7 +84,13 @@ bot.on('messageCreate', async (message: Message) => {
     finalPath = belovedGif
   }
 
-  await message.reply({ files: [finalPath] })
+  await message.reply({ files: [finalPath] }).catch(() => {
+    console.log('message failed to send.')
+  })
+
+  if (DELETE_IMAGES) {
+    await generation.cleanup()
+  }
 })
 
 async function run (): Promise<void> {

@@ -1,4 +1,4 @@
-import { ArgsOf, Client, Discord, On } from 'discordx'
+/* import { ArgsOf, Client, Discord, On } from 'discordx'
 
 @Discord()
 export class Example {
@@ -7,3 +7,4 @@ export class Example {
     console.log('Message Deleted', client.user?.username, message.content)
   }
 }
+*/

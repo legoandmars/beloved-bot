@@ -37,3 +37,9 @@ export async function tryDownloadImageFromArray (images: string[], exportPath: s
     return await tryDownloadImageFromArray(images, exportPath, attempt + 1, maxTries)
   }
 }
+
+export async function deleteImage (path: string): Promise<void> {
+  await fs.unlink(path).catch(err => {
+    console.log('Failed to delete file:' + err)
+  })
+}

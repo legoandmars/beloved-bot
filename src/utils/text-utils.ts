@@ -81,7 +81,4 @@ export function loadGlobalFonts (): void {
   } catch {
     console.log('Loading emoji font failed.')
   }
-  for (const family of GlobalFonts.families) {
-    console.log(family.family)
-  }
 }
