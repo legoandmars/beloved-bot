@@ -1,4 +1,4 @@
-import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas'
+import { createCanvas, type SKRSContext2D, GlobalFonts } from '@napi-rs/canvas'
 
 // Most of this text stuff needs to be rewritten but it works enough I don't want to touch it right now
 
@@ -60,7 +60,7 @@ export function getImageOfText (inputText: string): Buffer {
   const canvas = createCanvas(512, 512)
   const ctx = canvas.getContext('2d')
   const fontSize = resizeFontSizeToFit(inputText, ctx, 65.5, idealWidth)
-  ctx.font = fontSize + 'px Arial'
+  ctx.font = fontSize + 'px Arial, Apple Emoji'
   ctx.textAlign = 'center'
 
   const lines = getLines(ctx, inputText, idealWidth)
@@ -72,4 +72,12 @@ export function getImageOfText (inputText: string): Buffer {
   }
 
   return canvas.toBuffer('image/png')
+}
+
+export function loadGlobalFonts (): void {
+  try {
+    GlobalFonts.registerFromPath('/app/resources/AppleColorEmoji@2x.ttf', 'Apple Emoji')
+  } catch {
+    console.log('Loading emoji font failed.')
+  }
 }

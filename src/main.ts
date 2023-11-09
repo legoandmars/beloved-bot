@@ -8,6 +8,7 @@ import { Makesweet } from './external/makesweet.js'
 import { GenerationType } from './types/generation-type.js'
 import { type ImageService } from './types/image-service.js'
 import { MakesweetGeneration } from './utils/makesweet-generation.js'
+import { loadGlobalFonts } from './utils/text-utils.js'
 
 export const bot = new Client({
   // To use only guild command
@@ -106,6 +107,9 @@ async function run (): Promise<void> {
 
   // Pass token to ImageService
   imageService = new BingImages(process.env.BING_IMAGES_API_KEY)
+
+  // load fonts
+  loadGlobalFonts()
 }
 
 void run()

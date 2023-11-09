@@ -79,6 +79,10 @@ RUN \
   apt-get update; \
   apt-get install -y ttf-mscorefonts-installer fontconfig
 
+# install emoji font 
+RUN \
+  wget -P /app/resources/ https://github.com/PoomSmart/EmojiLibrary/releases/download/0.16.4/AppleColorEmoji@2x.ttf
+  
 # Set work directory
 WORKDIR /app
 
