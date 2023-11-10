@@ -89,7 +89,7 @@ export class MakesweetGeneration {
     // probably a way less gross way to do this now. don't wanna rewrite this too much rn tho
     // discord.js surely has an emoji class that would make this way less manual
 
-    const emotes = this.caption.match(/(<:|<a:)([^>]*):\d{19}>|\d{17}>/g)
+    const emotes = this.caption.match(/(<:|<a:)([^>]*):\d{17,19}>/g)
     const validEmotes: Emote[] = []
 
     if (emotes == null || emotes.length === 0) return
