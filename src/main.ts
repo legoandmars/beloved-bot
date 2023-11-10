@@ -67,34 +67,44 @@ bot.on('interactionCreate', (interaction: Interaction) => {
 bot.on('messageCreate', async (message: Message) => {
   // void bot.executeCommand(message)
   const generation = new MakesweetGeneration(message)
-  if (generation.generationType === GenerationType.None) return
+  try {
+    if (generation.generationType === GenerationType.None) return
 
-  void message.channel.sendTyping()
-  // try do actually parse stuff
-  const generationSuccess = await generation.generateImages(imageService, backupImageService)
-  if (!generationSuccess) {
-    // throw error
-    return
-  }
+    void message.channel.sendTyping()
+    // try do actually parse stuff
+    const generationSuccess = await generation.generateImages(imageService, backupImageService)
+    if (!generationSuccess) {
+      await error(message, generation)
+      return
+    }
 
-  // technically could also be mp4
-  const belovedGif = await makesweet.generateWithErrorGif(generation)
-  let finalPath: string
-  // transcode if necessary
-  if (!generation.failed && generation.needsTranscode() && generation.ffmpegExportPath !== undefined) {
-    finalPath = await ffmpeg.transcodeToGif(belovedGif, generation.ffmpegExportPath, generation.generationType)
-  } else {
-    finalPath = belovedGif
-  }
+    // technically could also be mp4
+    const belovedGif = await makesweet.generateWithErrorGif(generation)
+    let finalPath: string
+    // transcode if necessary
+    if (!generation.failed && generation.needsTranscode() && generation.ffmpegExportPath !== undefined) {
+      finalPath = await ffmpeg.transcodeToGif(belovedGif, generation.ffmpegExportPath, generation.generationType)
+    } else {
+      finalPath = belovedGif
+    }
 
-  await message.reply({ files: [finalPath] }).catch(() => {
-    console.log('message failed to send.')
-  })
+    await message.reply({ files: [finalPath] }).catch(() => {
+      console.log('message failed to send.')
+    })
 
-  if (DELETE_IMAGES) {
-    await generation.cleanup()
+    if (DELETE_IMAGES) {
+      await generation.cleanup()
+    }
+  } catch {
+    await error(message, generation)
   }
 })
+
+async function error (message: Message, generation: MakesweetGeneration): Promise<void> {
+  await message.reply({ files: [makesweet.errorGifPathFromGenerationType(generation.generationType)] }).catch(() => {
+    console.log('message failed to send.')
+  })
+}
 
 async function run (): Promise<void> {
   // The following syntax should be used in the commonjs environment

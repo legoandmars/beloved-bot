@@ -5,7 +5,7 @@ import { GenerationType } from '../types/generation-type.js'
 import { type ImageService } from '../types/image-service.js'
 import { BEHATED_SUFFIX, BELOVED_SUFFIX, FFMPEG_EXPORT_SUFFIX, GIF_EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, MULTI_IMAGE_SUPPORT, TRANSCODE_FROM_MP4, VIDEO_EXPORT_SUFFIX } from './constants.js'
 import { ImageCollection } from './image-collection.js'
-import { deleteImage, saveImageFromBuffer, tryDownloadImage, tryDownloadImageFromArray } from './image-utils.js'
+import { deleteImage, saveImageFromBuffer, tryDownloadImage } from './image-utils.js'
 import { getImageOfText } from './text-utils.js'
 
 export class MakesweetGeneration {

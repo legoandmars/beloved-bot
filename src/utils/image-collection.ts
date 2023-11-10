@@ -1,7 +1,6 @@
 import { createCanvas, Image, type SKRSContext2D } from '@napi-rs/canvas'
 import { type DiscordImage } from '../types/discord-image.js'
-import { MULTI_IMAGE_SUPPORT } from './constants.js'
-import { bufferFromDiscordImage, deleteImage, saveImageFromBuffer, tryDownloadImage } from './image-utils.js'
+import { bufferFromDiscordImage, saveImageFromBuffer } from './image-utils.js'
 
 // helps sort images by their appearance in a message
 // mostly only useful when emojis/pings are in play
