@@ -1,4 +1,5 @@
 export interface DiscordImage {
-  path: string
+  buffer?: Buffer
   index: number
+  backups?: string[]
 }

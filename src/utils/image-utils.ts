@@ -1,13 +1,32 @@
 import axios from 'axios'
 import { promises as fs } from 'fs'
 import sharp from 'sharp'
+import { type DiscordImage } from '../types/discord-image.js'
 import { MAX_IMAGE_RETRY_BEFORE_CANCELLING, STRETCH_IMAGES } from './constants.js'
 
-export async function downloadImage (imageUrl: string, exportPath: string): Promise<void> {
+export async function downloadImage (imageUrl: string): Promise<Buffer> {
   const imageResponse = await axios({ url: imageUrl, responseType: 'arraybuffer' })
-  const buffer = Buffer.from(imageResponse.data, 'binary')
+  return Buffer.from(imageResponse.data, 'binary')
   // TODO: Resize/crop options (and a way to auto-detect the best one maybe?)
-  await saveResizedImageFromBuffer(buffer, exportPath, 256, 256)
+  // await saveResizedImageFromBuffer(buffer, exportPath, 256, 256)
+}
+
+export async function bufferFromDiscordImage (image: DiscordImage, index: number): Promise<Buffer | undefined> {
+  // index 0 is buffer
+  // index 1+ is backups
+  let buffer: Buffer | undefined
+
+  if (image.buffer !== undefined && index === 0) {
+    buffer = image.buffer
+  } else if (image.backups !== undefined && index > 0) {
+    const backupIndex = index - 1
+    if (image.backups.length <= backupIndex + 1) {
+      const backup = image.backups[backupIndex]
+      buffer = await tryDownloadImage(backup)
+    }
+  }
+
+  return buffer
 }
 
 export async function saveResizedImageFromBuffer (buffer: Buffer, exportPath: string, width: number, height: number): Promise<void> {
@@ -21,24 +40,24 @@ export async function saveImageFromBuffer (buffer: Buffer, exportPath: string): 
   await fs.writeFile(exportPath, buffer)
 }
 
-export async function tryDownloadImage (image: string, exportPath: string): Promise<boolean> {
-  return await tryDownloadImageFromArray([image], exportPath)
+export async function tryDownloadImage (image: string): Promise<Buffer | undefined> {
+  return await tryDownloadImageFromArray([image])
 }
 
 // TODO: Add some sort of delay here just in case it starts spamming requests
-export async function tryDownloadImageFromArray (images: string[], exportPath: string, attempt: number = 0, maxTries: number = MAX_IMAGE_RETRY_BEFORE_CANCELLING): Promise<boolean> {
-  if (attempt > maxTries || attempt === images.length) return false
+export async function tryDownloadImageFromArray (images: string[], attempt: number = 0, maxTries: number = MAX_IMAGE_RETRY_BEFORE_CANCELLING): Promise<Buffer | undefined> {
+  if (attempt > maxTries || attempt === images.length) return undefined
   const image = images[attempt]
 
-  if (image === undefined) return false
+  if (image === undefined) return undefined
   // now actually attempt to download image
   try {
-    await downloadImage(image, exportPath)
-    return true
+    const downloadedImage = await downloadImage(image)
+    return downloadedImage
   } catch (ex) {
     console.log(`Error while trying to download image ${image}`)
     console.log(ex)
-    return await tryDownloadImageFromArray(images, exportPath, attempt + 1, maxTries)
+    return await tryDownloadImageFromArray(images, attempt + 1, maxTries)
   }
 }
 

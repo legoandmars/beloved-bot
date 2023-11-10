@@ -15,7 +15,7 @@ export class MakesweetGeneration {
   caption: string
 
   images: ImageCollection
-  //  imagePath: string | undefined
+  imagePath: string | undefined
   textImagePath: string | undefined
   exportPath: string | undefined
   ffmpegExportPath: string | undefined
@@ -40,18 +40,23 @@ export class MakesweetGeneration {
     await this.generateTextImage()
 
     if (this.images.needsExternalImage()) {
-      const image = await this.getImagePathFromService(imageService, backupImageService)
-      if (image === undefined) return false
-      this.images.addImage({ path: image, index: 99999 })
+      const images = await this.getImageUrlsFromService(imageService, backupImageService)
+      if (images === undefined) return false
+      for (let i = 0; i < images.length; i++) {
+        this.images.addImage({ backups: images, index: 99999 + i })
+      }
     }
 
+    this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
+    const exportedImageSuccess = await this.images.export(this.imagePath)
+    if (!exportedImageSuccess) return false
     this.exportPath = this.getImagePathWithSuffix(TRANSCODE_FROM_MP4 ? VIDEO_EXPORT_SUFFIX : GIF_EXPORT_SUFFIX)
     this.ffmpegExportPath = this.getImagePathWithSuffix(FFMPEG_EXPORT_SUFFIX)
     // if we've made it to this point, both images exist 100%
     return true
   }
 
-  async getImagePathFromService (imageService: ImageService, backupImageService: ImageService | undefined): Promise<string | undefined> {
+  async getImageUrlsFromService (imageService: ImageService, backupImageService: ImageService | undefined): Promise<string[] | undefined> {
     // image has not been set by message parse, so we'll need to get one from the image service
     let images = await this.tryGenerateImagesFromService(imageService)
     // try again with the backup image service if it exists
@@ -62,11 +67,7 @@ export class MakesweetGeneration {
 
     if (images === undefined) return undefined
 
-    const imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
-
-    const success = await tryDownloadImageFromArray(images, imagePath)
-    if (!success) return undefined
-    return imagePath
+    return images
   }
 
   async tryGenerateImagesFromService (imageService: ImageService): Promise<string[] | undefined> {
@@ -106,10 +107,11 @@ export class MakesweetGeneration {
       while ((match = regex.exec(this.message.content)) !== null) {
         if (!this.needsMoreImages()) break
         // download image
-        const imagePath = this.getImagePathWithSuffix(`-${member[1].id}-${match.index}.png`)
         this.caption = this.caption.replace(`@${member[1].user.username}`, member[1].user.username) // replace once for the single ping
-        if (!await tryDownloadImage(`https://cdn.discordapp.com/avatars/${member[1].id}/${member[1].user.avatar}.png?size=256`, imagePath)) continue
-        this.images.addImage({ path: imagePath, index: match.index })
+        const image = await tryDownloadImage(`https://cdn.discordapp.com/avatars/${member[1].id}/${member[1].user.avatar}.png?size=256`)
+        if (image === undefined) continue
+
+        this.images.addImage({ buffer: image, index: match.index })
       }
     }
   }
@@ -138,14 +140,14 @@ export class MakesweetGeneration {
     for (const emote of validEmotes) {
       if (!this.needsMoreImages()) break
       // download image
-      const imagePath = this.getImagePathWithSuffix(`-${emote.id}-${emote.index}.png`)
-      if (!await tryDownloadImage(`https://cdn.discordapp.com/emojis/${emote.id}.png?size=256`, imagePath)) continue
-      this.images.addImage({ path: imagePath, index: emote.index })
+      const image = await tryDownloadImage(`https://cdn.discordapp.com/emojis/${emote.id}.png?size=256`)
+      if (image === undefined) continue
+      this.images.addImage({ buffer: image, index: emote.index })
     }
   }
 
   async cleanup (): Promise<void> {
-    await this.images.cleanup()
+    if (this.imagePath !== undefined) await deleteImage(this.imagePath)
     if (this.textImagePath !== undefined) await deleteImage(this.textImagePath)
     if (this.exportPath !== undefined) await deleteImage(this.exportPath)
     if (this.needsTranscode() && this.ffmpegExportPath !== undefined) await deleteImage(this.ffmpegExportPath)
