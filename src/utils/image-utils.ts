@@ -40,12 +40,12 @@ export async function saveImageFromBuffer (buffer: Buffer, exportPath: string): 
   await fs.writeFile(exportPath, buffer)
 }
 
-export async function tryDownloadImage (image: string): Promise<Buffer | undefined> {
-  return await tryDownloadImageFromArray([image])
+export async function tryDownloadImage (image: string, suppressErrors: boolean = false): Promise<Buffer | undefined> {
+  return await tryDownloadImageFromArray([image], 0, MAX_IMAGE_RETRY_BEFORE_CANCELLING, suppressErrors)
 }
 
 // TODO: Add some sort of delay here just in case it starts spamming requests
-export async function tryDownloadImageFromArray (images: string[], attempt: number = 0, maxTries: number = MAX_IMAGE_RETRY_BEFORE_CANCELLING): Promise<Buffer | undefined> {
+export async function tryDownloadImageFromArray (images: string[], attempt: number = 0, maxTries: number = MAX_IMAGE_RETRY_BEFORE_CANCELLING, suppressErrors: boolean = false): Promise<Buffer | undefined> {
   if (attempt > maxTries || attempt === images.length) return undefined
   const image = images[attempt]
 
@@ -55,8 +55,10 @@ export async function tryDownloadImageFromArray (images: string[], attempt: numb
     const downloadedImage = await downloadImage(image)
     return downloadedImage
   } catch (ex) {
-    console.log(`Error while trying to download image ${image}`)
-    console.log(ex)
+    if (!suppressErrors) {
+      console.log(`Error while trying to download image ${image}`)
+      console.log(ex)
+    }
     return await tryDownloadImageFromArray(images, attempt + 1, maxTries)
   }
 }

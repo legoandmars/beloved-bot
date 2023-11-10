@@ -34,8 +34,10 @@ export class ImageCollection {
     const ctx = canvas.getContext('2d')
 
     // overlay images
-    for (const image of this.images) {
-      await this.attemptOverlayImageOnCanvas(image, ctx, 0, 0, 128, 128)
+    const imageWidth = 256 / this.images.length
+    for (let i = 0; i < this.images.length; i++) {
+      const image = this.images[i]
+      await this.attemptOverlayImageOnCanvas(image, ctx, i * imageWidth, 0, imageWidth, 256)
     }
 
     return await canvas.encode('png')

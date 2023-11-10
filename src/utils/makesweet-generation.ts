@@ -42,9 +42,7 @@ export class MakesweetGeneration {
     if (this.images.needsExternalImage()) {
       const images = await this.getImageUrlsFromService(imageService, backupImageService)
       if (images === undefined) return false
-      for (let i = 0; i < images.length; i++) {
-        this.images.addImage({ backups: images, index: 99999 + i })
-      }
+      this.images.addImage({ backups: images, index: 99999 })
     }
 
     this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
@@ -108,7 +106,10 @@ export class MakesweetGeneration {
         if (!this.needsMoreImages()) break
         // download image
         this.caption = this.caption.replace(`@${member[1].user.username}`, member[1].user.username) // replace once for the single ping
-        const image = await tryDownloadImage(`https://cdn.discordapp.com/avatars/${member[1].id}/${member[1].user.avatar}.png?size=256`)
+        let image = await tryDownloadImage(`https://cdn.discordapp.com/avatars/${member[1].id}/${member[1].user.avatar}.png?size=256`)
+        if (image === undefined) {
+          image = await tryDownloadImage(`${member[1].user.displayAvatarURL()}?size=256`) // TODO: see if it's viable to just replace the call with this
+        }
         if (image === undefined) continue
 
         this.images.addImage({ buffer: image, index: match.index })
