@@ -18,6 +18,10 @@ export class ImageCollection {
     return this.images.length === 0
   }
 
+  tryGetExistingBuffer (url: string): Buffer | undefined {
+    return this.images.find(x => x.bufferUrl === url)?.buffer
+  }
+
   async export (exportPath: string): Promise<boolean> {
     // TODO: Compile into one big canvas
     this.images = this.images.sort((a: DiscordImage, b: DiscordImage) => a.index - b.index)
