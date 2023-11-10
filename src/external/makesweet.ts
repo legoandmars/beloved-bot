@@ -45,9 +45,10 @@ export class Makesweet {
   }
 
   execStringFromGeneration (generation: MakesweetGeneration): string | undefined {
-    if (generation.imagePath === undefined || generation.textImagePath === undefined || generation.exportPath === undefined) return undefined
+    const imagePath = generation.images.getPath()
+    if (imagePath === undefined || generation.textImagePath === undefined || generation.exportPath === undefined) return undefined
 
-    return `${MAKESWEET_PATH} --zip ${HEART_TEMPLATE_PATH} --in ${generation.imagePath} ${generation.textImagePath} ${TRANSCODE_FROM_MP4 ? '--vid' : '--gif'} ${generation.exportPath}`
+    return `${MAKESWEET_PATH} --zip ${HEART_TEMPLATE_PATH} --in ${imagePath} ${generation.textImagePath} ${TRANSCODE_FROM_MP4 ? '--vid' : '--gif'} ${generation.exportPath}`
   }
 
   errorGifPathFromGenerationType (generationType: GenerationType): string {

@@ -10,7 +10,9 @@ export const VIDEO_EXPORT_SUFFIX = '.mp4'
 export const FFMPEG_EXPORT_SUFFIX = '-transcode.gif'
 export const DELETE_IMAGES = true
 export const STRETCH_IMAGES = true
+export const MULTI_IMAGE_SUPPORT = true
 export const TRANSCODE_FROM_MP4 = false // this option "works" but is kind of broken and will throw an error. the quality is also not better. dont wanna fix it rn
+// note: these two options do nothing when multiple images are used (such as two emotes)
 export const ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT = true
 export const ONLY_USE_EMOTE_IMAGE_WHEN_NO_OTHER_TEXT = true
 export const MAX_IMAGE_RETRY_BEFORE_CANCELLING = 10

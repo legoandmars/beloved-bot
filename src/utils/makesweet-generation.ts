@@ -3,8 +3,9 @@ import path from 'path'
 import { type Emote } from '../types/emote.js'
 import { GenerationType } from '../types/generation-type.js'
 import { type ImageService } from '../types/image-service.js'
-import { BEHATED_SUFFIX, BELOVED_SUFFIX, FFMPEG_EXPORT_SUFFIX, GIF_EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT, TRANSCODE_FROM_MP4, VIDEO_EXPORT_SUFFIX } from './constants.js'
-import { deleteImage, downloadImage, saveImageFromBuffer, tryDownloadImageFromArray } from './image-utils.js'
+import { BEHATED_SUFFIX, BELOVED_SUFFIX, FFMPEG_EXPORT_SUFFIX, GIF_EXPORT_SUFFIX, IMAGE1_SUFFIX, IMAGE2_SUFFIX, IMAGE_DIRECTORY, MULTI_IMAGE_SUPPORT, TRANSCODE_FROM_MP4, VIDEO_EXPORT_SUFFIX } from './constants.js'
+import { ImageCollection } from './image-collection.js'
+import { deleteImage, saveImageFromBuffer, tryDownloadImage, tryDownloadImageFromArray } from './image-utils.js'
 import { getImageOfText } from './text-utils.js'
 
 export class MakesweetGeneration {
@@ -13,7 +14,8 @@ export class MakesweetGeneration {
   // TODO: Probably worth abstracting caption a bit more so I don't have to keep doing getTrimmedCaption calls
   caption: string
 
-  imagePath: string | undefined
+  images: ImageCollection
+  //  imagePath: string | undefined
   textImagePath: string | undefined
   exportPath: string | undefined
   ffmpegExportPath: string | undefined
@@ -21,6 +23,7 @@ export class MakesweetGeneration {
   failed: boolean = false
 
   constructor (message: Message) {
+    this.images = new ImageCollection()
     this.message = message
     this.generationType = this.getMessageGenerationType()
     if (this.generationType != null) {
@@ -36,26 +39,34 @@ export class MakesweetGeneration {
     await this.parseMessage()
     await this.generateTextImage()
 
-    if (this.imagePath == null) {
-      // image has not been set by message parse, so we'll need to get one from the image service
-      let images = await this.tryGenerateImagesFromService(imageService)
-      // try again with the backup image service if it exists
-      if (images === undefined && backupImageService !== undefined) {
-        console.log(`Main image failed for ${this.getTrimmedCaption()}. Attempting secondary image service`)
-        images = await this.tryGenerateImagesFromService(backupImageService)
-      }
-
-      if (images === undefined) return false
-
-      this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
-
-      const success = await tryDownloadImageFromArray(images, this.imagePath)
-      if (!success) return false
+    if (this.images.needsExternalImage()) {
+      const image = await this.getImagePathFromService(imageService, backupImageService)
+      if (image === undefined) return false
+      this.images.addImage({ path: image, index: 99999 })
     }
+
     this.exportPath = this.getImagePathWithSuffix(TRANSCODE_FROM_MP4 ? VIDEO_EXPORT_SUFFIX : GIF_EXPORT_SUFFIX)
     this.ffmpegExportPath = this.getImagePathWithSuffix(FFMPEG_EXPORT_SUFFIX)
     // if we've made it to this point, both images exist 100%
     return true
+  }
+
+  async getImagePathFromService (imageService: ImageService, backupImageService: ImageService | undefined): Promise<string | undefined> {
+    // image has not been set by message parse, so we'll need to get one from the image service
+    let images = await this.tryGenerateImagesFromService(imageService)
+    // try again with the backup image service if it exists
+    if (images === undefined && backupImageService !== undefined) {
+      console.log(`Main image failed for ${this.getTrimmedCaption()}. Attempting secondary image service`)
+      images = await this.tryGenerateImagesFromService(backupImageService)
+    }
+
+    if (images === undefined) return undefined
+
+    const imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
+
+    const success = await tryDownloadImageFromArray(images, imagePath)
+    if (!success) return undefined
+    return imagePath
   }
 
   async tryGenerateImagesFromService (imageService: ImageService): Promise<string[] | undefined> {
@@ -83,17 +94,22 @@ export class MakesweetGeneration {
       this.caption = this.caption.replace(member.displayName, member.user.username)
     })
 
-    if (this.imagePath !== undefined) return
+    if (!this.needsMoreImages() || this.message.mentions.members === null) return
 
-    // add an image if there's only one mention
-    // (TODO: ADD more? somehow combine images for many users?)
-    if (this.message.mentions.members?.size === 1) {
-      const firstMember = this.message.mentions.members.first()
-      if (firstMember !== undefined && (!ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT || this.getTrimmedCaption() === `@${firstMember?.user.username}`)) {
-        // replace first @ instance. this may break if USE_AVATAR_WHEN_MESSAGE_IS_MORE_THAN_PING is true. this should be fixed
-        this.caption = this.caption.replace('@', '')
-        this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
-        await downloadImage(`https://cdn.discordapp.com/avatars/${firstMember.id}/${firstMember.user.avatar}.png?size=256`, this.imagePath)
+    // a bit scuffed to work around .cleanContent - ideally in the future we would use message.content and just parse users ourselves
+    // definitely not the ideal way to do this but i just need something that lets me get indexes for now
+    for (const member of this.message.mentions.members) {
+      if (!this.needsMoreImages()) break
+      if (member[1].user?.username === null) continue
+      const regex = new RegExp(`@${member[1].id}`, 'g') // doesn't need to be exact, just Good Enough to sort
+      let match
+      while ((match = regex.exec(this.message.content)) !== null) {
+        if (!this.needsMoreImages()) break
+        // download image
+        const imagePath = this.getImagePathWithSuffix(`-${member[1].id}-${match.index}.png`)
+        this.caption = this.caption.replace(`@${member[1].user.username}`, member[1].user.username) // replace once for the single ping
+        if (!await tryDownloadImage(`https://cdn.discordapp.com/avatars/${member[1].id}/${member[1].user.avatar}.png?size=256`, imagePath)) continue
+        this.images.addImage({ path: imagePath, index: match.index })
       }
     }
   }
@@ -113,22 +129,23 @@ export class MakesweetGeneration {
 
       const emoteName = emote.substring(emote.indexOf(':') + 1, emote.lastIndexOf(':'))
       const emoteId = emote.substring(emote.lastIndexOf(':') + 1, emote.lastIndexOf('>'))
+      validEmotes.push({ name: emoteName, id: emoteId, index: this.caption.indexOf(emote) })
       this.caption = this.caption.replace(emote, emoteName)
-      validEmotes.push({ name: emoteName, id: emoteId })
     }
 
-    if (this.imagePath !== undefined) return
+    if (!this.needsMoreImages()) return
 
-    if (validEmotes.length === 1 && (!ONLY_USE_AVATAR_IMAGE_WHEN_NO_OTHER_TEXT || this.getTrimmedCaption() === validEmotes[0].name)) {
-      // replace first @ instance. this may break if USE_AVATAR_WHEN_MESSAGE_IS_MORE_THAN_PING is true. this should be fixed
-      this.caption = this.caption.replace('@', '')
-      this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
-      await downloadImage(`https://cdn.discordapp.com/emojis/${validEmotes[0].id}.png?size=256`, this.imagePath)
+    for (const emote of validEmotes) {
+      if (!this.needsMoreImages()) break
+      // download image
+      const imagePath = this.getImagePathWithSuffix(`-${emote.id}-${emote.index}.png`)
+      if (!await tryDownloadImage(`https://cdn.discordapp.com/emojis/${emote.id}.png?size=256`, imagePath)) continue
+      this.images.addImage({ path: imagePath, index: emote.index })
     }
   }
 
   async cleanup (): Promise<void> {
-    if (this.imagePath !== undefined) await deleteImage(this.imagePath)
+    await this.images.cleanup()
     if (this.textImagePath !== undefined) await deleteImage(this.textImagePath)
     if (this.exportPath !== undefined) await deleteImage(this.exportPath)
     if (this.needsTranscode() && this.ffmpegExportPath !== undefined) await deleteImage(this.ffmpegExportPath)
@@ -146,6 +163,10 @@ export class MakesweetGeneration {
     }
 
     return true
+  }
+
+  needsMoreImages (): boolean {
+    return MULTI_IMAGE_SUPPORT || this.images.needsExternalImage()
   }
 
   getImagePathWithSuffix (suffix: string): string {

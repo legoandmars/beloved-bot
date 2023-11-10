@@ -21,6 +21,10 @@ export async function saveImageFromBuffer (buffer: Buffer, exportPath: string): 
   await fs.writeFile(exportPath, buffer)
 }
 
+export async function tryDownloadImage (image: string, exportPath: string): Promise<boolean> {
+  return await tryDownloadImageFromArray([image], exportPath)
+}
+
 // TODO: Add some sort of delay here just in case it starts spamming requests
 export async function tryDownloadImageFromArray (images: string[], exportPath: string, attempt: number = 0, maxTries: number = MAX_IMAGE_RETRY_BEFORE_CANCELLING): Promise<boolean> {
   if (attempt > maxTries || attempt === images.length) return false
