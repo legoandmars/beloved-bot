@@ -4,6 +4,7 @@ import { IntentsBitField } from 'discord.js'
 import { Client } from 'discordx'
 import { BingImages } from './external/bing-images.js'
 import { FFmpeg } from './external/ffmpeg.js'
+import { GoogleCSEImages } from './external/google-cse-images.js'
 import { Makesweet } from './external/makesweet.js'
 import { GenerationType } from './types/generation-type.js'
 import { type ImageService } from './types/image-service.js'
@@ -36,6 +37,8 @@ export const bot = new Client({
 
 // TODO make this actually gracefully handle the api key failing & add warnings when certain env variables missing
 let imageService: ImageService
+let backupImageService: ImageService | undefined
+
 const makesweet: Makesweet = new Makesweet()
 const ffmpeg: FFmpeg = new FFmpeg()
 
@@ -68,7 +71,7 @@ bot.on('messageCreate', async (message: Message) => {
 
   void message.channel.sendTyping()
   // try do actually parse stuff
-  const generationSuccess = await generation.generateImages(imageService)
+  const generationSuccess = await generation.generateImages(imageService, backupImageService)
   if (!generationSuccess) {
     // throw error
     return
@@ -106,15 +109,26 @@ async function run (): Promise<void> {
     throw Error('Could not find BOT_TOKEN in your environment')
   }
 
-  if (process.env.BING_IMAGES_API_KEY === undefined) {
-    throw Error('Could not find BING_IMAGES_API_KEY in your environment')
+  const bingApiAvailable = process.env.BING_IMAGES_API_KEY !== undefined
+  const googleApiAvailable = process.env.GOOGLE_CSE_ID !== undefined && process.env.GOOGLE_CSE_API_KEY !== undefined
+
+  // todo rewrite/give the user priority choice
+  // Pass tokens to ImageService
+  if (bingApiAvailable && googleApiAvailable) {
+    imageService = new GoogleCSEImages(process.env.GOOGLE_CSE_API_KEY as string, process.env.GOOGLE_CSE_ID as string)
+    backupImageService = new BingImages(process.env.BING_IMAGES_API_KEY as string)
+  } else if (bingApiAvailable) {
+    imageService = new BingImages(process.env.BING_IMAGES_API_KEY as string)
+    backupImageService = undefined
+  } else if (googleApiAvailable) {
+    imageService = new GoogleCSEImages(process.env.GOOGLE_CSE_API_KEY as string, process.env.GOOGLE_CSE_ID as string)
+    backupImageService = undefined
+  } else {
+    throw Error('Could not find BING_IMAGES_API_KEY or (GOOGLE_CSE_ID and GOOGLE_CSE_API_KEY) in your environment')
   }
 
   // Log in with your bot token
   await bot.login(process.env.BOT_TOKEN)
-
-  // Pass token to ImageService
-  imageService = new BingImages(process.env.BING_IMAGES_API_KEY)
 
   // load fonts
   loadGlobalFonts()
@@ -125,3 +139,5 @@ void run()
 // applicable env variables:
 // BING_IMAGES_API_KEY
 // BOT_TOKEN
+// GOOGLE_CSE_ID
+// GOOGLE_CSE_API_KEY

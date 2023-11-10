@@ -6,5 +6,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - BING_IMAGES_API_KEY=${BING_IMAGES_API_KEY}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      - GOOGLE_CSE_API_KEY=${GOOGLE_CSE_API_KEY}
     volumes:
       - ./images:/app/images

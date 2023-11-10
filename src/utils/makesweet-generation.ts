@@ -31,16 +31,21 @@ export class MakesweetGeneration {
     }
   }
 
-  async generateImages (imageService: ImageService): Promise<boolean> {
+  async generateImages (imageService: ImageService, backupImageService: ImageService | undefined): Promise<boolean> {
     // try do actually parse stuff
     await this.parseMessage()
     await this.generateTextImage()
 
     if (this.imagePath == null) {
       // image has not been set by message parse, so we'll need to get one from the image service
-      const images = await imageService.getImagesPathsFromTextPrompt(this.getTrimmedCaption())
-      // console.log(images)
-      if (images === undefined || images?.length === 0) return false
+      let images = await this.tryGenerateImagesFromService(imageService)
+      // try again with the backup image service if it exists
+      if (images === undefined && backupImageService !== undefined) {
+        console.log(`Main image failed for ${this.getTrimmedCaption()}. Attempting secondary image service`)
+        images = await this.tryGenerateImagesFromService(backupImageService)
+      }
+
+      if (images === undefined) return false
 
       this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
 
@@ -51,6 +56,14 @@ export class MakesweetGeneration {
     this.ffmpegExportPath = this.getImagePathWithSuffix(FFMPEG_EXPORT_SUFFIX)
     // if we've made it to this point, both images exist 100%
     return true
+  }
+
+  async tryGenerateImagesFromService (imageService: ImageService): Promise<string[] | undefined> {
+    const images = await imageService.getImagesPathsFromTextPrompt(this.getTrimmedCaption())
+    // console.log(images)
+    if (images === undefined || images?.length === 0) return undefined
+
+    return images
   }
 
   async parseMessage (): Promise<void> {
@@ -118,7 +131,7 @@ export class MakesweetGeneration {
     if (this.imagePath !== undefined) await deleteImage(this.imagePath)
     if (this.textImagePath !== undefined) await deleteImage(this.textImagePath)
     if (this.exportPath !== undefined) await deleteImage(this.exportPath)
-    if (this.ffmpegExportPath !== undefined) await deleteImage(this.ffmpegExportPath)
+    if (this.needsTranscode() && this.ffmpegExportPath !== undefined) await deleteImage(this.ffmpegExportPath)
   }
 
   needsTranscode (): boolean {
