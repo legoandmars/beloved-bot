@@ -19,7 +19,7 @@ export class MakesweetGeneration {
   ffmpegExportPath: string | undefined
 
   failed: boolean = false
-
+  searched: boolean = true
   constructor (message: Message) {
     this.message = message
     this.generationType = this.getMessageGenerationType()
@@ -93,6 +93,7 @@ export class MakesweetGeneration {
         // replace first @ instance. this may break if USE_AVATAR_WHEN_MESSAGE_IS_MORE_THAN_PING is true. this should be fixed
         this.caption = this.caption.replace('@', '')
         this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
+        this.searched = false
         await downloadImage(`https://cdn.discordapp.com/avatars/${firstMember.id}/${firstMember.user.avatar}.png?size=256`, this.imagePath)
       }
     }
@@ -123,6 +124,7 @@ export class MakesweetGeneration {
       // replace first @ instance. this may break if USE_AVATAR_WHEN_MESSAGE_IS_MORE_THAN_PING is true. this should be fixed
       this.caption = this.caption.replace('@', '')
       this.imagePath = this.getImagePathWithSuffix(IMAGE1_SUFFIX)
+      this.searched = false
       await downloadImage(`https://cdn.discordapp.com/emojis/${validEmotes[0].id}.png?size=256`, this.imagePath)
     }
   }

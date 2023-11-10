@@ -12,7 +12,7 @@ export class GoogleCSEImages implements ImageService {
 
   async getImagesPathsFromTextPrompt (inputText: string): Promise<string[] | undefined> {
     try {
-      const response = await axios.get(`https://www.googleapis.com/customsearch/v1?key=${this.apiKey}&cx=${this.searchEngineId}&searchType=image&q=${encodeURIComponent(inputText)}`)
+      const response = await axios.get(`https://www.googleapis.com/customsearch/v1?key=${this.apiKey}&cx=${this.searchEngineId}&searchType=image&safe=active&q=${encodeURIComponent(inputText)}`)
 
       // TODO: Sort and try to get a square-ish image so it doesn't look weird
       const images = []
